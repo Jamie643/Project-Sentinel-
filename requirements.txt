@@ -1,3 +1,4 @@
 google-genai
 requests
 tenacity
+pip install --upgrade google-generativeai
