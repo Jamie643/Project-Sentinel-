@@ -1,0 +1,41 @@
+name: Sentinel Scout Daily Pipeline
+
+on:
+  schedule:
+    # Runs daily at 06:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allows manual triggering from GitHub UI
+
+jobs:
+  run-sentinel:
+    # Upgraded runner target to prevent OS deprecation warnings
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python Environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip' # Automatically caches dependencies to speed up workflow
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Execute Sentinel Scout Script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          HEARTBEAT_URL: ${{ secrets.HEARTBEAT_URL }}
+          MAX_LATENCY_MS: "2500.0"
+          MAX_DRAWDOWN_PCT: "0.05"
+          MAX_SLIPPAGE_PCT: "0.005"
+          ORDER_TIMEOUT_SECS: "30"
+        run: |
+          python sentinel_scout.py
