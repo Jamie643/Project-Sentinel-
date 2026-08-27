@@ -12,42 +12,28 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 def send_telegram_message(text: str):
-    """Sends a text message to Telegram with reliable error handling and payload truncation."""
+    """Sends a text message to Telegram with proper error handling and payload truncation."""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("Telegram credentials not configured. Skipping DM.")
         return
 
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
 
-    # Truncate text to avoid Telegram's 4096 character limit
-    safe_text = text[:4000]
+    # Truncate text to stay safely under Telegram's 4096 limit
+    safe_text = str(text)[:4000]
 
-    # Try sending with Markdown formatting first
+    # First attempt: Send as unformatted raw text to prevent Markdown parsing errors on tracebacks
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
-        "text": safe_text,
-        "parse_mode": "Markdown"
+        "text": safe_text
     }
 
     try:
         response = requests.post(url, json=payload, timeout=10)
         response.raise_for_status()
         print("Telegram message sent successfully.")
-    except Exception:
-        print("Markdown payload failed. Retrying as clean unformatted text...")
-        
-        # Fallback: Strip Markdown formatting parameters and convert to raw string
-        fallback_payload = {
-            "chat_id": TELEGRAM_CHAT_ID,
-            "text": safe_text
-        }
-        
-        try:
-            fallback_resp = requests.post(url, json=fallback_payload, timeout=10)
-            fallback_resp.raise_for_status()
-            print("Telegram message sent successfully (plain text fallback).")
-        except Exception as e:
-            print(f"Failed to send Telegram message on fallback: {e}")
+    except Exception as e:
+        print(f"Failed to send Telegram message: {e}")
 
 @retry(
     retry=retry_if_exception_type(APIError),
@@ -59,7 +45,6 @@ def generate_scout_report():
     """Generates the scout report using gemini-3.6-flash."""
     prompt = "Generate the Sentinel Scout daily market and intel summary digest."
     
-    # Updated to gemini-3.6-flash
     response = client.models.generate_content(
         model="gemini-3.6-flash",
         contents=prompt
@@ -74,8 +59,7 @@ def main():
         send_telegram_message(report_text)
 
     except Exception as e:
-        # Clean exception string to avoid Telegram formatting bugs
-        error_msg = f"⚠️ Sentinel Scout Alert\n\nFailed to generate report due to an unexpected error:\n{str(e)}"
+        error_msg = f"⚠️ Sentinel Scout Alert\n\nFailed to generate report due to an error:\n{str(e)}"
         print(f"Error executing Sentinel Scout: {e}")
         send_telegram_message(error_msg)
         sys.exit(1)
