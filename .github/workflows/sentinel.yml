@@ -2,8 +2,8 @@ name: Sentinel Scout Daily Pipeline
 
 on:
   schedule:
-    # Runs daily at 06:00 UTC
-    - cron: '0 6 * * *'
+  # Runs daily around 06:12 UTC (~7:12 AM WAT) avoiding top-of-hour congestion
+  - cron: '12 6 * * *'
   workflow_dispatch: # Allows manual triggering from GitHub UI
 
 jobs:
